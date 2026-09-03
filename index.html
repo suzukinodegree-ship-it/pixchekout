@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Checkout PIX</title>
+<style>
+  :root {
+    --bg: #0b0f0d;
+    --card: #10201a;
+    --green: #1fae5c;
+    --green-dark: #178a49;
+    --navy: #0c1b33;
+    --text: #f2f5f3;
+    --muted: #9fb0a8;
+    --danger: #d1352b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .offer {
+    max-width: 420px;
+    width: 100%;
+    background: linear-gradient(180deg, #12241c, #0b1712);
+    border: 1px solid #1c3327;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .offer h1 { font-size: 1.25rem; margin: 0 0 8px; }
+  .offer p.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; }
+
+  .cta-btn {
+    width: 100%;
+    background: linear-gradient(180deg, var(--green), var(--green-dark));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cta-btn:hover { filter: brightness(1.05); }
+  .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .trust {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 12px;
+  }
+
+  /* Modal */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: #fff;
+    color: #111;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .modal-head {
+    background: var(--navy);
+    color: #ffd166;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+  }
+  .modal-head h2 { margin: 0; font-size: 1.1rem; }
+  .modal-head p { margin: 4px 0 0; color: #cfe0f5; font-size: 0.85rem; }
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  .modal-body { padding: 24px; }
+
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .amount-box {
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    margin: 16px 0;
+  }
+  .amount-box .val { color: #1fae5c; font-size: 1.6rem; font-weight: 700; }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .qr-wrap { text-align: center; }
+  .qr-wrap img { width: 220px; height: 220px; margin: 12px 0; }
+
+  .pix-code {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.75rem;
+    word-break: break-all;
+    max-height: 70px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+
+  .instructions {
+    background: #eafbf1;
+    border: 1px solid #c8ecd7;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 0.85rem;
+    margin: 14px 0;
+  }
+  .instructions ol { margin: 8px 0 0; padding-left: 18px; }
+  .instructions li { margin-bottom: 4px; }
+
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #d1d5db;
+    border-top-color: #1fae5c;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { color: var(--danger); font-size: 0.85rem; margin-top: 8px; }
+
+  form label {
+    display: block;
+    font-size: 0.82rem;
+    color: #444;
+    margin: 10px 0 4px;
+  }
+  form input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 0.95rem;
+  }
+
+  .success-box { text-align: center; padding: 12px 0; }
+  .success-box .check {
+    font-size: 2.5rem;
+    color: var(--green);
+  }
+</style>
+</head>
+<body>
+
+<div class="offer">
+  <h1>Acesso completo — pagamento único, sem mensalidade</h1>
+  <p class="sub">Liberação imediata assim que o pagamento for confirmado.</p>
+  <button class="cta-btn" id="openCheckout">SIM! QUERO RECEBER AGORA →</button>
+  <p class="trust">🔒 Pagamento seguro · ⚡ Liberação na hora</p>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <button class="modal-close" id="closeModal">✕</button>
+      <h2>Pagamento Instantâneo via PIX</h2>
+      <p>Liberação imediata do seu acesso</p>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Passo 1: dados do cliente -->
+      <div class="step active" id="step1">
+        <form id="customerForm">
+          <label>Nome completo</label>
+          <input type="text" id="name" required />
+          <label>CPF</label>
+          <input type="text" id="document" required placeholder="Só números" />
+          <label>E-mail</label>
+          <input type="email" id="email" required />
+
+          <div class="amount-box">
+            <div>Valor total</div>
+            <div class="val" id="amountDisplay">R$ 47,00</div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="generateBtn">GERAR PIX ⚡</button>
+          <div class="error-msg" id="formError"></div>
+        </form>
+      </div>
+
+      <!-- Passo 2: QR Code -->
+      <div class="step" id="step2">
+        <div class="qr-wrap">
+          <p>Escaneie o QR Code ou copie o código Pix abaixo:</p>
+          <img id="qrImg" src="" alt="QR Code Pix" />
+        </div>
+        <div class="pix-code" id="pixCodeText"></div>
+        <button class="btn-primary" id="copyBtn" style="background:var(--navy)">📋 COPIAR CÓDIGO PIX</button>
+
+        <div class="instructions">
+          👇 Falta só PAGAR — leva 1 minutinho:
+          <ol>
+            <li>Abra o aplicativo do seu banco</li>
+            <li>Toque em PIX e depois em Pix Copia e Cola</li>
+            <li>Cole o código copiado (ou escaneie o QR)</li>
+            <li>Confirme o pagamento ✅</li>
+          </ol>
+        </div>
+
+        <div class="status-line">
+          <div class="spinner"></div>
+          <span id="statusText">Aguardando confirmação do pagamento...</span>
+        </div>
+      </div>
+
+      <!-- Passo 3: sucesso -->
+      <div class="step" id="step3">
+        <div class="success-box">
+          <div class="check">✅</div>
+          <h3>Pagamento confirmado!</h3>
+          <p>Seu acesso já foi liberado. Confira seu e-mail.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Configuração ----
+  const AMOUNT_CENTS = 4700;       // R$ 47,00 — em centavos
+  const PRODUCT_TITLE = "E-book / Acesso Completo";
+  const POLL_INTERVAL_MS = 5000;   // fallback de polling a cada 5s
+  const POLL_TIMEOUT_MS = 15 * 60 * 1000; // desiste após 15 min
+
+  const overlay = document.getElementById('overlay');
+  const steps = { 1: document.getElementById('step1'), 2: document.getElementById('step2'), 3: document.getElementById('step3') };
+
+  function showStep(n) {
+    Object.values(steps).forEach(s => s.classList.remove('active'));
+    steps[n].classList.add('active');
+  }
+
+  document.getElementById('openCheckout').onclick = () => {
+    overlay.classList.add('open');
+    showStep(1);
+  };
+  document.getElementById('closeModal').onclick = () => {
+    overlay.classList.remove('open');
+    stopPolling();
+  };
+
+  let pollTimer = null;
+  function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+  document.getElementById('customerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('generateBtn');
+    const errBox = document.getElementById('formError');
+    errBox.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Gerando...';
+
+    const payload = {
+      amount: AMOUNT_CENTS,
+      description: PRODUCT_TITLE,
+      customer: {
+        name: document.getElementById('name').value,
+        document: document.getElementById('document').value,
+        email: document.getElementById('email').value,
+        // telefone não é coletado na tela; o backend preenche um valor
+        // padrão (ver api/create-pix.js)
+      },
+      item: { title: PRODUCT_TITLE, price: AMOUNT_CENTS, quantity: 1 },
+      utm: window.location.search.replace('?', ''),
+    };
+
+    try {
+      // Chama SEU backend, não a Duttyfy diretamente
+      const res = await fetch('/api/create-pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao gerar PIX');
+      }
+
+      document.getElementById('pixCodeText').textContent = data.pixCode;
+      document.getElementById('qrImg').src =
+        'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(data.pixCode);
+
+      showStep(2);
+      startPolling(data.transactionId);
+    } catch (err) {
+      errBox.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'GERAR PIX ⚡';
+    }
+  });
+
+  document.getElementById('copyBtn').onclick = () => {
+    const code = document.getElementById('pixCodeText').textContent;
+    navigator.clipboard.writeText(code);
+    const btn = document.getElementById('copyBtn');
+    const original = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => (btn.textContent = original), 1500);
+  };
+
+  function startPolling(transactionId) {
+    const startedAt = Date.now();
+    pollTimer = setInterval(async () => {
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        stopPolling();
+        document.getElementById('statusText').textContent =
+          'Ainda não identificamos o pagamento. Se já pagou, aguarde alguns instantes.';
+        return;
+      }
+      try {
+        const res = await fetch('/api/check-status?transactionId=' + encodeURIComponent(transactionId));
+        const data = await res.json();
+        if (data.status === 'COMPLETED') {
+          stopPolling();
+          showStep(3);
+        }
+      } catch (err) {
+        // silencioso — tenta de novo no próximo ciclo
+      }
+    }, POLL_INTERVAL_MS);
+  }
+</script>
+
+</body>
+</html>
